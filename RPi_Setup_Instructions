@@ -1,0 +1,333 @@
+# Step by step instructions to set up brand new raspberrypi for DAQ data aquisition
+
+1. Using RaspberryPi Imager, install operating system on SD Card
+	- OS: RASPBERRY PI OS LITE (32-BIT)
+
+2. put SD card in Pi and boot up with keyboard, mouse, and screen
+
+3. Select US english as language
+
+4.Set Login
+	- set name to pi-[Location]-daq where location is the 3 letter acronym for 
+         the site (i.e. lyr for longyearben)
+	- set password to "UNHMIRL"
+	- make sure to label RPi board
+
+5. once logged in, use the command "sudo raspi-conifg" to open configuration window
+	- For WiFi (if no ethernet): 
+		a. select "System Options"
+		b. select "Wirelss LAN"
+		c. Enter SSID and Password (I find using hotspot on my phone to be easiest)
+	- Allow serial port and ssh connections
+		a. select "Interface Options"
+		b. select "SSH"
+		c. select "yes" to enable 
+		d. reselect "Interface Options"
+		e. select "Serial Port"
+		f. select "No" for login shell to be accessible over serial
+		g. select "Yes" for serial port hardware to be enabled
+	- Change Keyboard setting (if not setup properly on first boot!)
+		a. select "Localization Options"
+		b. select "Change Keyboard Layout"
+		c. select "Generic 105-key PC (intl.)"
+		d. select "English (US)"
+		e. select "Engligh (US)" again
+		f. select "The Default for the keyboard layout"
+		g. select "No compose key"
+	- Change TimeZone 
+		a. select "Localication Options"
+		b. select "Timezone"
+		c. select "None of the above"
+		d. select "UTC"
+	- Change Hostname 
+		a. select "System Options"
+		b. select "Hostname"
+		c. change to "raspberrypi-[Location]-daq" that matches login name itteration
+	- Disable Screen Blanking
+		a. select "Display Options"
+		b. select "Screen Blanking"
+		c. disable screen blanking
+	
+
+6. Roboot the RPi using "sudo reboot" command (if not promoted to restart)
+
+7. Check internet connect using command "ping google.com" and see if there
+	  are any packet losses when aborted
+
+9. Update/Upgrade system
+	- sudo apt-get update
+	- sudo apt-get upgrade
+
+10. For HDMI Displays, force HDMI resolution (refer to 5inch_HDMI_LCD_User_Manual_EN.pdf waveshare 4" HDMI display)	
+	- Download and install driver
+		- sudo apt install git
+		- git clone https://github.com/waveshare/LCD-show.git
+		- cd LCD-show/
+		- sudo ./LCD4-800x480-show
+	
+	- sudo nano /boot/config.txt
+	- Change this lines where appropriate
+		display_rotate=1
+	- Uncomment "config_hdmi_boost=4" line
+
+11. Download PIGPIO codes into /home/pi-[Location]-daq/
+	- wget https://github.com/joan2937/pigpio/archive/master.zip
+	- unzip master.zip
+	- cd pigpio-master
+	- make
+ 	- sudo make install
+	- If the python portion of install fails:
+		sudo apt install python-setuptools python3-setuptools
+
+	- More information about the PIGPIO library and installation can be found at 
+		http://abyz.me.uk/rpi/pigpio/download.html
+
+12. Edit /boot/config.txt to setup pps signal on gpis pin 18 by adding these lines at the end of the file
+# the next 3 lines are for GPS PPS signals
+dtoverlay=pps-gpio,gpiopin=18
+enable_uart=1
+init_uart_baud=9600
+	- Install pps tools
+		sudo apt-get install pps-tools
+
+13. Copy codes onto RPi
+	- Make ULF Directory
+		a. mkdir /home/pi-[Location]-daq/ULF
+	- Copy files into directory	
+		a. check_acq_run.sh
+		b. main_acq.c
+		c. Makefile
+		d. push_data.sh
+		e. setup_ntp.sh
+		f. string.sh
+	- Edit all files so the paths match the system (anywhere where /home/pi-[Location]-daq/ appears)
+	- Edit push_data.sh so the path is to the correct server file
+	- Edit main_acq.c so that data filenames have site included ("ULF-[LOC]-....)
+	- Create empty text files
+		a. In '/home/pi-[Location]-daq/ULF' create 'NMEA_String.txt'
+		b. In '/home/pi-[Location]-daq/' create 'pigs_output.txt'
+	- compile main code that runs acquisition
+		a. sudo make
+	
+14. Make Data directory
+	- mkdir /home/pi-[location]-daq/ULF/Data_Files
+
+
+15. Configure so GPS communicates with RPi when wired to pi-pins 4,6,8,10,12
+	- Install gpsd and gpsd-clients
+		a. sudo apt-get install gpsd gpsd-clients ntp 
+		b. sudo apt-get install --fix-missing gpsd gpsd-clients ntp
+	- Check RPi is communicating with GPS
+		a. sudo cat /dev/serial0
+		b. output should be continuous list of strings starting with something like
+			$GPRMC.....
+			$GPGGA,,,, etc
+	- Edit /etc/rc.local to include this line before "end"
+		a. /home/pi-[Location]-daq/ULF/setup_ntp.sh &
+	- Edit /etc/ntp.conf to include only these line:
+
+pool us.pool.ntp.org iburst
+
+driftfile /var/lib/ntp/ntp.drift
+logfile /var/log/ntp.log
+
+restrict default kod nomodify notrap nopeer noquery
+restrict -6 default kod nomodify notrap nopeer noquery
+restrict 127.0.0.1 mask 255.255.255.0
+restrict -6 ::1
+
+# GPS Serial data reference (NTP0)
+server 127.127.28.0
+fudge 127.127.28.0 time1 0.9999 refid GPS
+
+# GPS PPS reference (NTP1)
+server 127.127.28.1 prefer
+fudge 127.127.28.1 refid PPS
+
+	- Reboot
+	- Check if you're recieveing GPS data
+		a. sudo cgps
+	-Check that NTP is setup and computer clock is synced to gps
+		a. ntpq -p
+	remote           refid      st t when poll reach   delay   offset  jitter
+==============================================================================
+ us.pool.ntp.org .POOL.          16 p    -   64    0    0.000   +0.000   0.002
+*SHM(0)          .GPS.            0 l   39   64  377    0.000  -105.59  48.846
+ SHM(1)          .PPS.            0 l    -   64    0    0.000   +0.000   0.000
+
+
+ 	- the * shows which remote it is sync to, we want it on GPS
+
+	- These steps are explained in more detail at 
+		https://gpsd.gitlab.io/gpsd/gpsd-time-service-howto.html
+
+
+
+16. sudo apt-get install sshpass
+
+17. Run programs on boot and monitor the process, restarting if necessary
+	- Edit /home/pi-[Location]-daq/.bashrc by pasting following at bottom of file:
+
+# Commands to run acqusition on boot, monitor that it is still running, and push the data daily
+
+if pgrep pigpiod >/dev/null
+then
+    :
+else
+    sudo pigpiod
+fi
+if pgrep check_acq >/dev/null
+then
+    :
+else
+    sudo /home/pi-unh-daq/ULF/check_acq_run.sh &
+fi
+
+sudo ifconfig wlan0 down
+
+if pgrep push_data > /dev/null
+then
+    :
+else
+    sudo /home/pi-unh-daq/ULF/push_data.sh &
+fi
+
+
+18. Install Firewall
+	- Download Firewall (https://raspberrypi-guide.github.io/other/Improve-raspberry-pi-security)
+		a. sudo apt install ufw
+	- Allow MIRL server to access pi's remotely
+		a. sudo ufw allow from 132.177.207.87
+	- Enable firewall, and check that you can still login through the MIRL server
+		a. sudo ufw enable
+
+19. For a static IP adress!
+	- Edit /etc/dhcpcd.conf to include (with proper IP addresses, routers, and domains
+
+# Example static IP configuration:
+interface eth0
+static ip_address=132.177.207.89/24
+static routers=132.177.207.1
+static domain_name_servers=132.177.128.56 132.177.128.99
+		
+		
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Instructions for setting up HDMI display Raspberry Pi
+
+1. Using RaspberryPi Imager, install operating system on SD Card
+	- OS: RASPBERRY PI OS (32-BIT, with desktop)
+
+2. Follow the prompts to set up the pi
+	- Choose US and American english with US keyboard
+	- for the login name, use pi-[Location]-hdmi
+	- password should be UNHMIRL
+	- Select appropriate wifi network (unless there is an ethernet connection)
+	- Don't update
+
+3. Once rebooted, change timezone to UTC (not an option during setup)
+	- open terminal and "sudo raspi-config"
+	- goto "Localization"
+	- select "Timezone"
+	- select "None of the above"
+	- select "UTC"
+4. Allow for remote connection
+	- sudo raspi-config
+	- select "Interface options"
+	- select "SSH"
+	- enable ssh connection
+5. Disable screen blanking
+	- sudo raspi-config
+	- select "Display Options"
+	- select "Screen Blanking"
+	- disable screen blanking
+
+6. For HDMI Displays, force HDMI resolution (refer to 5inch_HDMI_LCD_User_Manual_EN.pdf waveshare 4" HDMI display)
+	- Download and install driver in /home/pi-[Location]-hdmi/
+		- git clone https://github.com/waveshare/LCD-show.git
+		- cd LCD-show/
+		- sudo ./LCD4-800x480-show
+	- Edit /boot/config.txt
+		- Insert this lines where appropriate
+			display_rotate=1
+		- Uncomment "hdmi_force_hotplug=1" line
+		- Uncomment "config_hdmi_boost=4" line
+
+7. Copy over files
+	- Make ULF Directory
+		a. mkdir ULF
+	- Copy files over to ULF directory 
+		a. main_readonly.c
+		b. make_spectrogram_xy.py
+		c. make_timeseries.py
+		d. make_spec_and_time.py
+		e. make_spec_and_time_xy.py
+		f. check_acq_run.sh
+		g. check_display_run.sh
+		h. stop_things.sh
+		i. file_monitoring_and_deletion.sh
+	- compile main code that runs acquisition
+                b. gcc main_readonly.c -o main_ro
+	- different programs and their uses:
+		a. make_spectrogram_xy.py: makes full screen plot that displays spectrograms of both axes, 
+                either for RTD or survey
+		b. make_timeseries.py: makes full screen plot that displays timeseris of both axes, 
+                either for RTD or survey 
+		c. make_spec_and_time.py: makes full screen plot that displays specgrogram and time series 
+		   of a single axes, either for RTD or survey
+		d. make_spec_and_time_xy.py: makes full screen plot that displays specgrogram and time series 
+		   of a both axes, either for RTD or survey
+		e. main_readonly.c (main_ro): read data from ADC-BUF board and save data to hourly files
+		f. check_acq_run.sh: check to see if the main_ro is running every 60 sec, if not, restart 
+		g. check_display_run.sh: check to see if the display code is running every 60 sec, 
+		   if not, restart
+		h. stop_things.sh: stops the check programs and python display program so you can use 
+		   terminal without interrupts
+		i. file_monitoring_and_deletion.sh: delete files older than 72 hours 
+ 	          (or maintains 72 data files, hopefully equal to 72 hours)
+
++++++Note: to restart display after using "stop_things.sh", just open another terminal 	
+
+8. Make Data directory
+	- mkdir /home/pi-[location]-daq/ULF/Data_Files
+
+9. !!!!IMPORTANT!!!!! Edit all files so their paths match the pi name (pi-[Location]-hdmi)
+	- make_spectrogram.py lines 41 and 84
+	- make_spec_and_time.py lines 52 and 88
+	- make_spec_and_time.py lines ?? and ??
+	- make_timeseries.py lines 38 and 74
+	- main_readonly.c lines 9, 10 and 250 (MAKE SURE TO RECOMPILE)
+	- check_acq_run.sh line 10
+	- check_display_run.sh line 18
+
+10. Install plotting library for python 
+	- sudo apt-get install python3-matplotlib 
+
+11. Have acquisition and display run on boot or when a new terminal is opened
+	- Edit the .bachrc file to induce these lines at the bottom:
+if pgrep check_acq >/dev/null
+then
+    :
+else
+    sudo /home/pi-unh-daq/ULF/check_acq_run.sh &
+fi
+
+if pgrep check_display >/dev/null
+then
+    :
+else
+    sudo /home/pi-unh-daq/ULF/check_display_run.sh &
+fi
+
+	- Edit /etc/rc.local to have file monitoring and deletion run on boot
+		a. /home/pi-[Location]-hdmi/ULF/file_monitoring_and_deletion.sh &
+	- Make and edit .desktop file
+		a. sudo nano /etc.xdg/autostart/open_terminal.desktop
+		b. Add these lines to file:
+			[Desktop Entry]
+			
+			Name=Terminal
+			Exec=x-terminal-emulator
+
+ 
+
+

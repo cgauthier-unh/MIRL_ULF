@@ -1,0 +1,1 @@
+remote refid st t when poll reach delay offset jitter ============================================================================== us.pool.ntp.org .POOL. 16 p - 64 0 0.000 +0.000 0.002 *SHM(0) .GPS. 0 l 4 64 1 0.000 +1863.2 0.002 SHM(1) .PPS. 0 l - 64 0 0.000 +0.000 0.000
