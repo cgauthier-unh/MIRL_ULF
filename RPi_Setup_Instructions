@@ -58,18 +58,6 @@
 	- sudo apt-get update
 	- sudo apt-get upgrade
 
-10. For HDMI Displays, force HDMI resolution (refer to 5inch_HDMI_LCD_User_Manual_EN.pdf waveshare 4" HDMI display)	
-	- Download and install driver
-		- sudo apt install git
-		- git clone https://github.com/waveshare/LCD-show.git
-		- cd LCD-show/
-		- sudo ./LCD4-800x480-show
-	
-	- sudo nano /boot/config.txt
-	- Change this lines where appropriate
-		display_rotate=1
-	- Uncomment "config_hdmi_boost=4" line
-
 11. Download PIGPIO codes into /home/pi-[Location]-daq/
 	- wget https://github.com/joan2937/pigpio/archive/master.zip
 	- unzip master.zip
@@ -93,21 +81,19 @@ init_uart_baud=9600
 13. Copy codes onto RPi
 	- Make ULF Directory
 		a. mkdir /home/pi-[Location]-daq/ULF
-	- Copy files into directory	
-		a. check_acq_run.sh
-		b. main_acq.c
-		c. Makefile
-		d. push_data.sh
-		e. setup_ntp.sh
-		f. string.sh
+	- Copy files into directory from GitHub
+		a. git clone https://github.com/cgauthier-unh/MIRL_ULF
 	- Edit all files so the paths match the system (anywhere where /home/pi-[Location]-daq/ appears)
+		a. sed -I 's/pi-unh-daq/pi-[Location]-daq/g' *
 	- Edit push_data.sh so the path is to the correct server file
 	- Edit main_acq.c so that data filenames have site included ("ULF-[LOC]-....)
-	- Create empty text files
+	- Create empty text files (if not there)
 		a. In '/home/pi-[Location]-daq/ULF' create 'NMEA_String.txt'
 		b. In '/home/pi-[Location]-daq/' create 'pigs_output.txt'
 	- compile main code that runs acquisition
 		a. sudo make
+	- make shell scripts executable
+		a. sudo chmod 755 *.sh
 	
 14. Make Data directory
 	- mkdir /home/pi-[location]-daq/ULF/Data_Files
@@ -122,8 +108,6 @@ init_uart_baud=9600
 		b. output should be continuous list of strings starting with something like
 			$GPRMC.....
 			$GPGGA,,,, etc
-	- Edit /etc/rc.local to include this line before "end"
-		a. /home/pi-[Location]-daq/ULF/setup_ntp.sh &
 	- Edit /etc/ntp.conf to include only these line:
 
 pool us.pool.ntp.org iburst
@@ -166,31 +150,8 @@ fudge 127.127.28.1 refid PPS
 16. sudo apt-get install sshpass
 
 17. Run programs on boot and monitor the process, restarting if necessary
-	- Edit /home/pi-[Location]-daq/.bashrc by pasting following at bottom of file:
-
-# Commands to run acqusition on boot, monitor that it is still running, and push the data daily
-
-if pgrep pigpiod >/dev/null
-then
-    :
-else
-    sudo pigpiod
-fi
-if pgrep check_acq >/dev/null
-then
-    :
-else
-    sudo /home/pi-unh-daq/ULF/check_acq_run.sh &
-fi
-
-sudo ifconfig wlan0 down
-
-if pgrep push_data > /dev/null
-then
-    :
-else
-    sudo /home/pi-unh-daq/ULF/push_data.sh &
-fi
+	- Edit /etc/rc.local to include before "end"
+/home/pi-unh-daq/ULF/start_everything.sh &
 
 
 18. Install Firewall
@@ -209,6 +170,19 @@ interface eth0
 static ip_address=132.177.207.89/24
 static routers=132.177.207.1
 static domain_name_servers=132.177.128.56 132.177.128.99
+
+
+10. For HDMI Displays, force HDMI resolution (refer to 5inch_HDMI_LCD_User_Manual_EN.pdf waveshare 4" HDMI display)	
+	- Download and install driver
+		- sudo apt install git
+		- git clone https://github.com/waveshare/LCD-show.git
+		- cd LCD-show/
+		- sudo ./LCD4-800x480-show
+	
+	- sudo nano /boot/config.txt
+	- Change this lines where appropriate
+		display_rotate=1
+	- Uncomment "config_hdmi_boost=4" line
 		
 		
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
