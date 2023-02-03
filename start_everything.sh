@@ -11,14 +11,14 @@ fi
 
 sleep 120
 
-if pgrep check_ntpqi >/dev/null
+if pgrep check_ntpq >/dev/null
 then
     :
 else
     sudo /home/pi-unh-daq/ULF/check_ntpq.sh &
 fi
 
-sleep 5
+sleep 10
 
 if pgrep check_acq >/dev/null
 then
@@ -27,7 +27,7 @@ else
     sudo /home/pi-unh-daq/ULF/check_acq_run.sh &
 fi
 
-sleep 5
+sleep 10
 
 if pgrep push_data > /dev/null
 then
