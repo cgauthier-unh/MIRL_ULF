@@ -68,7 +68,8 @@ static char * get_gps_nmea(char buff[100]){
 static void newfile(void)
 {
     struct tm    ttime;
-    char  time_string[ 32 ], fname[ 64 ], pathname[128], gp[100];
+    char  time_string[ 32 ], fname[ 64 ], pathname[128];
+    char  gp[100]=" ";
 
     if(rcvok)
     {
@@ -128,9 +129,9 @@ static void readpkt(int fd)
     }
     rcvok = 1;
 
-    secofhr = rcvtime.tv_sec%14400;
+    secofhr = rcvtime.tv_sec%3600;
     secofday = rcvtime.tv_sec%86400;
-    if(record && (secofday == 0)) newfile();
+    if(record && (secofhr == 0)) newfile();
 
     i=0;
     ns = 0;
