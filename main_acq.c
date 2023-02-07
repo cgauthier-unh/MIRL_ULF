@@ -20,8 +20,6 @@
 #include <pigpiod_if2.h>
 
 #define LOOPUSEC 1000000
-#define GPIO_PIN 17
-#define BAUD_RATE 9600
 
 long sec;
 
