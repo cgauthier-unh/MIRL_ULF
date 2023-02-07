@@ -131,7 +131,7 @@ static void readpkt(int fd)
 
     secofhr = rcvtime.tv_sec%3600;
     secofday = rcvtime.tv_sec%86400;
-    if(record && (secofhr == 0)) newfile();
+    if(record && (secofday == 0)) newfile();
 
     i=0;
     ns = 0;
