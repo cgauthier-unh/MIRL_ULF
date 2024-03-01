@@ -47,6 +47,14 @@
 		a. select "Display Options"
 		b. select "Screen Blanking"
 		c. disable screen blanking
+	- Autologin
+		a. select "System Option"
+		b. select "Boot/ Auto Login"
+		c. select "Console Autologin"
+	- Network at Boot (do this when you get to site and have network established!)
+		a. select "System Option"
+		b. select "Network at Boot"
+		c. "Yes"
 	
 
 6. Roboot the RPi using "sudo reboot" command (if not promoted to restart)
